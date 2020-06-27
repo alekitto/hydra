@@ -228,7 +228,11 @@ func (s *DefaultStrategy) forwardAuthenticationRequest(w http.ResponseWriter, r 
 	// Set up csrf/challenge/verifier values
 	verifier := strings.Replace(uuid.New(), "-", "", -1)
 	challenge := strings.Replace(uuid.New(), "-", "", -1)
-	csrf := strings.Replace(uuid.New(), "-", "", -1)
+
+	csrf, err := getCsrfValue(r, s.r.CookieStore(), cookieAuthenticationCSRFName, s.c.CookieSameSiteLegacyWorkaround(), s.c.ServesHTTPS())
+	if err != nil {
+		csrf = strings.Replace(uuid.New(), "-", "", -1)
+	}
 
 	// Generate the request URL
 	iu := urlx.AppendPaths(s.c.IssuerURL(), s.c.OAuth2AuthURL())

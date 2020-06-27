@@ -80,15 +80,23 @@ func createCsrfSession(w http.ResponseWriter, r *http.Request, store sessions.St
 }
 
 func validateCsrfSession(r *http.Request, store sessions.Store, name, expectedCSRF string, sameSiteLegacyWorkaround, secure bool) error {
-	if cookie, err := getCsrfSession(r, store, name, sameSiteLegacyWorkaround, secure); err != nil {
-		return errors.WithStack(fosite.ErrRequestForbidden.WithDebug("CSRF session cookie could not be decoded"))
-	} else if csrf, err := mapx.GetString(cookie.Values, "csrf"); err != nil {
-		return errors.WithStack(fosite.ErrRequestForbidden.WithDebug("No CSRF value available in the session cookie"))
+	if csrf, err := getCsrfValue(r, store, name, sameSiteLegacyWorkaround, secure); err != nil {
+		return err
 	} else if csrf != expectedCSRF {
 		return errors.WithStack(fosite.ErrRequestForbidden.WithDebug("The CSRF value from the token does not match the CSRF value from the data store"))
 	}
 
 	return nil
+}
+
+func getCsrfValue(r *http.Request, store sessions.Store, name string, sameSiteLegacyWorkaround, secure bool) (string, error) {
+	if cookie, err := getCsrfSession(r, store, name, sameSiteLegacyWorkaround, secure); err != nil {
+		return "", errors.WithStack(fosite.ErrRequestForbidden.WithDebug("CSRF session cookie could not be decoded"))
+	} else if csrf, err := mapx.GetString(cookie.Values, "csrf"); err != nil {
+		return "", errors.WithStack(fosite.ErrRequestForbidden.WithDebug("No CSRF value available in the session cookie"))
+	} else {
+		return csrf, nil
+	}
 }
 
 func getCsrfSession(r *http.Request, store sessions.Store, name string, sameSiteLegacyWorkaround, secure bool) (*sessions.Session, error) {
